@@ -392,10 +392,85 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
-//PAGEBREAK!
-// Blank page.
-//PAGEBREAK!
-// Blank page.
-//PAGEBREAK!
-// Blank page.
+//makes page table entries only readable
+int
+mprotect(void *addr, int len){
+  struct proc *curproc = myproc();
 
+  //Check if addr is not page aligned
+  if((int)(((int) addr) % PGSIZE )  != 0){
+    cprintf("\naddr is not page aligned\n");
+    return -1;
+  }
+
+  //Check if addr points to a region that is not currently a part of the address space
+  if((int)addr + len*PGSIZE > curproc->vlimit){
+    cprintf("\naddr points to a region that is not currently a part of the address space\n");
+    return -1;
+  }
+  
+  //Check if len is less than or equal to zero
+  if(len <= 0){
+    cprintf("\nlen is less than or equal to zero\n");
+    return -1;
+  }
+
+  pte_t *pte;
+  int i;
+  for (i = (int) addr; i < ((int) addr + (len) *PGSIZE); i+= PGSIZE){
+    pte = walkpgdir(curproc->pgdir, (void*) i, 0);
+    if(pte && ((*pte & PTE_U) != 0) && ((*pte & PTE_P) != 0)){
+      *pte = (*pte) & (~PTE_W) ; //Clearing the write bit
+    }else{
+      return -1;
+    }
+  }
+
+  lcr3(V2P(curproc->pgdir));
+  return 0;
+}
+
+//makes page table entries both readable and writable
+int
+munprotect(void *addr, int len){
+  struct proc *curproc = myproc();
+
+  //Check if addr is not page aligned
+  if((int)(((int) addr) % PGSIZE )  != 0){
+    cprintf("\naddr is not page aligned\n");
+    return -1;
+  }
+
+  //Check if addr points to a region that is not currently a part of the address space
+  if((int)addr + len*PGSIZE > curproc->vlimit){
+    cprintf("\naddr points to a region that is not currently a part of the address space\n");
+    return -1;
+  }
+  
+  //Check if len is less than or equal to zero
+  if(len <= 0){
+    cprintf("\nlen is less than or equal to zero\n");
+    return -1;
+  }
+
+  pte_t *pte;
+  int i; 
+  for (i = (int) addr; i < ((int) addr + (len) *PGSIZE); i+= PGSIZE){
+    pte = walkpgdir(curproc->pgdir, (void*) i, 0);
+    if(pte && ((*pte & PTE_U) != 0) && ((*pte & PTE_P) != 0)){
+      *pte = (*pte) | (PTE_W) ; //Setting the write bit
+    }else{
+      return -1;
+    }
+  }
+
+  lcr3(V2P(curproc->pgdir));
+  return 0;
+}
+
+//PAGEBREAK!
+// Blank page.
+//PAGEBREAK!
+// Blank page.
+//PAGEBREAK!
+// Blank page.
